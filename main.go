@@ -4,8 +4,8 @@ import (
 	"github.com/andyklimenko/testify-usage-example/api"
 	"github.com/andyklimenko/testify-usage-example/api/storage"
 	"github.com/andyklimenko/testify-usage-example/api/storage/database"
+	"github.com/andyklimenko/testify-usage-example/api/storage/migrations"
 	"github.com/andyklimenko/testify-usage-example/config"
-	_ "github.com/lib/pq"
 	"github.com/sirupsen/logrus"
 )
 
@@ -18,6 +18,10 @@ func main() {
 	db, err := database.DbConnect(cfg.DB.Driver, cfg.DB.DSN)
 	if err != nil {
 		logrus.Fatalf("db connect: %v", err)
+	}
+
+	if err := migrations.Up(db, cfg.DB.Driver); err != nil {
+		logrus.Fatalf("applying db migrations: %v", err)
 	}
 
 	srv := api.New(cfg, storage.New(db))
