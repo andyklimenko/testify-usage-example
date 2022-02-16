@@ -22,9 +22,16 @@ type repo interface {
 	DeleteUser(ctx context.Context, id string) error
 }
 
+type userChangelog interface {
+	UserCreated(userID string) error
+	UserUpdated(userID string) error
+	UserDeleted(userID string) error
+}
+
 type Server struct {
-	httpSrv *http.Server
-	repo    repo
+	httpSrv       *http.Server
+	repo          repo
+	userChangelog userChangelog
 }
 
 func (s *Server) Start() error {
@@ -62,9 +69,10 @@ func setupRouter(s *Server) *mux.Router {
 	return r
 }
 
-func New(cfg config.Config, s repo) *Server {
+func New(cfg config.Config, s repo, changelog userChangelog) *Server {
 	srv := &Server{
-		repo: s,
+		repo:          s,
+		userChangelog: changelog,
 	}
 
 	srv.httpSrv = &http.Server{

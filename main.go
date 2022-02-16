@@ -24,7 +24,7 @@ func main() {
 		logrus.Fatalf("applying db migrations: %v", err)
 	}
 
-	srv := api.New(cfg, storage.New(db))
+	srv := api.New(cfg, storage.New(db), nil)
 	if err := srv.Start(); err != nil {
 		logrus.Fatal(err)
 	}

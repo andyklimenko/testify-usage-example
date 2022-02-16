@@ -4,34 +4,29 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
-	"net/http/httptest"
-
-	"github.com/stretchr/testify/assert"
 
 	"github.com/andyklimenko/testify-usage-example/api/entity"
 	"github.com/google/uuid"
-	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
-func closeBody(c io.Closer) {
-	if err := c.Close(); err != nil {
-		logrus.Errorf("closing response body: %v", err)
-	}
+type mockedChangelog struct {
+	mock.Mock
 }
 
-func (s *srvSuite) setupServer() (string, func()) {
-	srv := &Server{
-		repo: s.repo,
-	}
-	testSrv := httptest.NewServer(setupRouter(srv))
-	srv.httpSrv = testSrv.Config
+func (m *mockedChangelog) UserCreated(userID string) error {
+	return m.Called(userID).Error(0)
+}
 
-	return testSrv.URL, func() {
-		testSrv.Close()
-	}
+func (m *mockedChangelog) UserUpdated(userID string) error {
+	return m.Called(userID).Error(0)
+}
+
+func (m *mockedChangelog) UserDeleted(userID string) error {
+	return m.Called(userID).Error(0)
 }
 
 func (s *srvSuite) createTestUser(srvURL string, u entity.User) (entity.User, error) {
@@ -62,13 +57,17 @@ func (s *srvSuite) createTestUser(srvURL string, u entity.User) (entity.User, er
 }
 
 func (s *srvSuite) TestGetUser() {
+	var cl mockedChangelog
+
 	newUser := entity.User{
 		FirstName: "John",
 		LastName:  "Doe",
 	}
 
-	srvURL, closer := s.setupServer()
+	srvURL, closer := s.setupServer(&cl)
 	defer closer()
+
+	cl.On("UserCreated", mock.Anything).Return(nil)
 
 	userCreated, err := s.createTestUser(srvURL, newUser)
 	require.NoError(s.T(), err)
@@ -83,10 +82,12 @@ func (s *srvSuite) TestGetUser() {
 	require.NoError(s.T(), json.NewDecoder(getUsersResp.Body).Decode(&userGot))
 
 	assert.Equal(s.T(), userCreated, userGot)
+
+	cl.AssertExpectations(s.T())
 }
 
 func (s *srvSuite) TestGetMissingUser() {
-	srvURL, closer := s.setupServer()
+	srvURL, closer := s.setupServer(nil)
 	defer closer()
 
 	missingUserID := uuid.New().String()
@@ -109,7 +110,7 @@ func (s *srvSuite) TestUpdateMissingUser() {
 		LastName:  "Just Bob",
 	}
 
-	srvURL, closer := s.setupServer()
+	srvURL, closer := s.setupServer(nil)
 	defer closer()
 
 	missingUserID := uuid.New().String()
@@ -133,14 +134,17 @@ func (s *srvSuite) TestUpdateMissingUser() {
 }
 
 func (s *srvSuite) TestUpdateUser() {
+	var cl mockedChangelog
+
 	newUser := entity.User{
 		FirstName: "Anakin",
 		LastName:  "Skywalker",
 	}
 
-	srvURL, closer := s.setupServer()
+	srvURL, closer := s.setupServer(&cl)
 	defer closer()
 
+	cl.On("UserCreated", mock.Anything).Return(nil)
 	userCreated, err := s.createTestUser(srvURL, newUser)
 	require.NoError(s.T(), err)
 
@@ -154,6 +158,7 @@ func (s *srvSuite) TestUpdateUser() {
 	req, err := http.NewRequest(http.MethodPut, srvURL+"/users/"+userCreated.ID, bytes.NewReader(bodyRaw))
 	require.NoError(s.T(), err)
 
+	cl.On("UserUpdated", userCreated.ID).Return(nil)
 	getUsersResp, err := s.httpCli.Do(req)
 	require.NoError(s.T(), err)
 
@@ -164,10 +169,11 @@ func (s *srvSuite) TestUpdateUser() {
 	require.NoError(s.T(), json.NewDecoder(getUsersResp.Body).Decode(&userUpdated))
 
 	assert.Equal(s.T(), userToUpdate, userUpdated)
+	cl.AssertExpectations(s.T())
 }
 
 func (s *srvSuite) TestDeleteMissingUser() {
-	srvURL, closer := s.setupServer()
+	srvURL, closer := s.setupServer(nil)
 	defer closer()
 
 	missingUserID := uuid.New().String()
@@ -188,20 +194,24 @@ func (s *srvSuite) TestDeleteMissingUser() {
 }
 
 func (s *srvSuite) TestDeleteUser() {
+	var cl mockedChangelog
+
 	newUser := entity.User{
 		FirstName: "Han",
 		LastName:  "Solo",
 	}
 
-	srvURL, closer := s.setupServer()
+	srvURL, closer := s.setupServer(&cl)
 	defer closer()
 
+	cl.On("UserCreated", mock.Anything).Return(nil)
 	userCreated, err := s.createTestUser(srvURL, newUser)
 	require.NoError(s.T(), err)
 
 	req, err := http.NewRequest(http.MethodDelete, srvURL+"/users/"+userCreated.ID, nil)
 	require.NoError(s.T(), err)
 
+	cl.On("UserDeleted", userCreated.ID).Return(nil)
 	deleteResp, err := s.httpCli.Do(req)
 	require.NoError(s.T(), err)
 
@@ -218,4 +228,6 @@ func (s *srvSuite) TestDeleteUser() {
 	// it's really deleted
 	assert.Equal(s.T(), http.StatusNotFound, errResp.Code)
 	assert.Equal(s.T(), fmt.Sprintf("user %s not found", userCreated.ID), errResp.Text)
+
+	cl.AssertExpectations(s.T())
 }
