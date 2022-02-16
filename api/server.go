@@ -18,6 +18,7 @@ import (
 type repo interface {
 	InsertUser(ctx context.Context, u entity.User) (entity.User, error)
 	UserByID(ctx context.Context, id string) (entity.User, error)
+	UpdateUser(ctx context.Context, id string, u entity.User) (entity.User, error)
 }
 
 type Server struct {
