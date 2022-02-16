@@ -165,3 +165,57 @@ func (s *srvSuite) TestUpdateUser() {
 
 	assert.Equal(s.T(), userToUpdate, userUpdated)
 }
+
+func (s *srvSuite) TestDeleteMissingUser() {
+	srvURL, closer := s.setupServer()
+	defer closer()
+
+	missingUserID := uuid.New().String()
+	req, err := http.NewRequest(http.MethodDelete, srvURL+"/users/"+missingUserID, nil)
+	require.NoError(s.T(), err)
+
+	resp, err := s.httpCli.Do(req)
+	require.NoError(s.T(), err)
+
+	defer closeBody(resp.Body)
+	require.Equal(s.T(), http.StatusNotFound, resp.StatusCode)
+
+	var errResp statusResponse
+	require.NoError(s.T(), json.NewDecoder(resp.Body).Decode(&errResp))
+
+	assert.Equal(s.T(), http.StatusNotFound, errResp.Code)
+	assert.Equal(s.T(), fmt.Sprintf("user %s not found", missingUserID), errResp.Text)
+}
+
+func (s *srvSuite) TestDeleteUser() {
+	newUser := entity.User{
+		FirstName: "Han",
+		LastName:  "Solo",
+	}
+
+	srvURL, closer := s.setupServer()
+	defer closer()
+
+	userCreated, err := s.createTestUser(srvURL, newUser)
+	require.NoError(s.T(), err)
+
+	req, err := http.NewRequest(http.MethodDelete, srvURL+"/users/"+userCreated.ID, nil)
+	require.NoError(s.T(), err)
+
+	deleteResp, err := s.httpCli.Do(req)
+	require.NoError(s.T(), err)
+
+	defer closeBody(deleteResp.Body)
+	require.Equal(s.T(), http.StatusOK, deleteResp.StatusCode)
+
+	tryToGetOnceAgain, err := http.Get(srvURL + "/users/" + userCreated.ID)
+	require.NoError(s.T(), err)
+	defer closeBody(tryToGetOnceAgain.Body)
+
+	var errResp statusResponse
+	require.NoError(s.T(), json.NewDecoder(tryToGetOnceAgain.Body).Decode(&errResp))
+
+	// it's really deleted
+	assert.Equal(s.T(), http.StatusNotFound, errResp.Code)
+	assert.Equal(s.T(), fmt.Sprintf("user %s not found", userCreated.ID), errResp.Text)
+}

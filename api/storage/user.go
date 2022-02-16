@@ -16,6 +16,7 @@ const (
 	qGetUserByID         = "SELECT * FROM users WHERE id=$1"
 	qGetUserByIdWithLock = "SELECT * FROM users WHERE id=$1 FOR UPDATE"
 	qUpdateUser          = "UPDATE users SET first_name=$1, last_name=$2 WHERE id=$3 RETURNING *"
+	qDeleteUser          = "DELETE FROM users WHERE id=$1"
 )
 
 type dbUser struct {
@@ -86,4 +87,18 @@ func (s *Storage) UpdateUser(ctx context.Context, id string, u entity.User) (ent
 	})
 
 	return updated, txErr
+}
+
+func (s *Storage) DeleteUser(ctx context.Context, id string) error {
+	return runInTx(s.db, func(tx *sqlx.Tx) error {
+		if _, err := s.userByIDTx(ctx, tx, id); err != nil {
+			return err
+		}
+
+		if _, err := tx.ExecContext(ctx, qDeleteUser, id); err != nil {
+			return fmt.Errorf("execute delete: %w", err)
+		}
+
+		return nil
+	})
 }

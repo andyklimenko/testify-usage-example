@@ -66,7 +66,7 @@ func (s *Server) updateUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	statusCode := http.StatusInternalServerError
-	err = fmt.Errorf("find user by id %s: %w", userID, err)
+	err = fmt.Errorf("update user by id %s: %w", userID, err)
 	if errors.Is(err, entity.ErrNotFound) {
 		statusCode = http.StatusNotFound
 		err = fmt.Errorf("user %s not found", userID)
@@ -75,5 +75,23 @@ func (s *Server) updateUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) deleteUser(w http.ResponseWriter, r *http.Request) {
+	userID, ok := mux.Vars(r)["id"]
+	if !ok {
+		s.respondNotOK(w, http.StatusBadRequest, errors.New("no user id"))
+		return
+	}
 
+	err := s.repo.DeleteUser(r.Context(), userID)
+	if err == nil {
+		s.respondOK(w, http.StatusOK, nil)
+		return
+	}
+
+	statusCode := http.StatusInternalServerError
+	err = fmt.Errorf("delete user by id %s: %w", userID, err)
+	if errors.Is(err, entity.ErrNotFound) {
+		statusCode = http.StatusNotFound
+		err = fmt.Errorf("user %s not found", userID)
+	}
+	s.respondNotOK(w, statusCode, err)
 }
