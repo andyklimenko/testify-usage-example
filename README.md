@@ -18,6 +18,6 @@ At server's startup all db migrations will automatically be applied
 export STORAGE_DRIVER=postgres
 export STORAGE_DSN='user=postgres password=secretpassword dbname=postgres host=localhost port=5432 sslmode=disable'
 export SERVER_ADDRESS=0.0.0.0:8080
-export SERVER_NOTIFY_ADDRESS=0.0.0.0:8080
+export NOTIFY_ADDRESS=https://webhook.site/#!/9699b471-d1b1-4674-a4d9-473a1d305059
 make run-server
 ```

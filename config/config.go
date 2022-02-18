@@ -9,12 +9,17 @@ import (
 
 type Config struct {
 	Server Server
+	Notify Notify
 	DB     DB
 }
 
 func (c Config) Load() error {
 	if err := c.Server.load("server"); err != nil {
 		return fmt.Errorf("http server configuration: %w", err)
+	}
+
+	if err := c.Notify.load("notify"); err != nil {
+		return fmt.Errorf("notified configuration: %w", err)
 	}
 
 	if err := c.DB.Load("storage"); err != nil {
