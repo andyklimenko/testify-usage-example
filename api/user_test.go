@@ -40,7 +40,7 @@ func (s *srvSuite) createTestUser(srvURL string, u entity.User) (entity.User, er
 		return entity.User{}, err
 	}
 
-	defer closeBody(postUsersResp.Body)
+	defer entity.CloseBody(postUsersResp.Body)
 	if postUsersResp.StatusCode != http.StatusCreated {
 		return entity.User{}, fmt.Errorf("unexpected status-code: %d", postUsersResp.StatusCode)
 	}
@@ -75,7 +75,7 @@ func (s *srvSuite) TestGetUser() {
 	getUsersResp, err := s.httpCli.Get(srvURL + "/users/" + userCreated.ID)
 	require.NoError(s.T(), err)
 
-	defer closeBody(getUsersResp.Body)
+	defer entity.CloseBody(getUsersResp.Body)
 	require.Equal(s.T(), http.StatusOK, getUsersResp.StatusCode)
 
 	var userGot entity.User
@@ -94,7 +94,7 @@ func (s *srvSuite) TestGetMissingUser() {
 	resp, err := s.httpCli.Get(srvURL + "/users/" + missingUserID)
 	require.NoError(s.T(), err)
 
-	defer closeBody(resp.Body)
+	defer entity.CloseBody(resp.Body)
 	require.Equal(s.T(), http.StatusNotFound, resp.StatusCode)
 
 	var errResp statusResponse
@@ -123,7 +123,7 @@ func (s *srvSuite) TestUpdateMissingUser() {
 	resp, err := s.httpCli.Do(req)
 	require.NoError(s.T(), err)
 
-	defer closeBody(resp.Body)
+	defer entity.CloseBody(resp.Body)
 	require.Equal(s.T(), http.StatusNotFound, resp.StatusCode)
 
 	var errResp statusResponse
@@ -162,7 +162,7 @@ func (s *srvSuite) TestUpdateUser() {
 	getUsersResp, err := s.httpCli.Do(req)
 	require.NoError(s.T(), err)
 
-	defer closeBody(getUsersResp.Body)
+	defer entity.CloseBody(getUsersResp.Body)
 	require.Equal(s.T(), http.StatusOK, getUsersResp.StatusCode)
 
 	var userUpdated entity.User
@@ -183,7 +183,7 @@ func (s *srvSuite) TestDeleteMissingUser() {
 	resp, err := s.httpCli.Do(req)
 	require.NoError(s.T(), err)
 
-	defer closeBody(resp.Body)
+	defer entity.CloseBody(resp.Body)
 	require.Equal(s.T(), http.StatusNotFound, resp.StatusCode)
 
 	var errResp statusResponse
@@ -215,12 +215,12 @@ func (s *srvSuite) TestDeleteUser() {
 	deleteResp, err := s.httpCli.Do(req)
 	require.NoError(s.T(), err)
 
-	defer closeBody(deleteResp.Body)
+	defer entity.CloseBody(deleteResp.Body)
 	require.Equal(s.T(), http.StatusOK, deleteResp.StatusCode)
 
 	tryToGetOnceAgain, err := http.Get(srvURL + "/users/" + userCreated.ID)
 	require.NoError(s.T(), err)
-	defer closeBody(tryToGetOnceAgain.Body)
+	defer entity.CloseBody(tryToGetOnceAgain.Body)
 
 	var errResp statusResponse
 	require.NoError(s.T(), json.NewDecoder(tryToGetOnceAgain.Body).Decode(&errResp))

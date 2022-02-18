@@ -1,7 +1,6 @@
 package api
 
 import (
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -11,7 +10,6 @@ import (
 	"github.com/andyklimenko/testify-usage-example/api/storage"
 	"github.com/andyklimenko/testify-usage-example/api/storage/database"
 	_ "github.com/lib/pq"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -31,12 +29,6 @@ func (s *srvSuite) SetupSuite() {
 	s.httpCli = &http.Client{Timeout: time.Second}
 	db := database.DB()
 	s.repo = storage.New(db)
-}
-
-func closeBody(c io.Closer) {
-	if err := c.Close(); err != nil {
-		logrus.Errorf("closing response body: %v", err)
-	}
 }
 
 func (s *srvSuite) setupServer(changelog userChangelog) (string, func()) {

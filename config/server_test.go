@@ -15,6 +15,11 @@ func TestServerLoad(t *testing.T) {
 	assert.EqualError(t, cfg.load("test"), ErrNoServerAddr.Error())
 
 	require.NoError(t, os.Setenv("TEST_ADDRESS", "http://localhost/hello/there"))
+	assert.EqualError(t, cfg.load("test"), ErrNoNotificationAddr.Error())
+
+	require.NoError(t, os.Setenv("TEST_NOTIFY_ADDRESS", "notify-test-url"))
+
 	require.NoError(t, cfg.load("test"))
 	assert.Equal(t, "http://localhost/hello/there", cfg.Addr)
+	assert.Equal(t, "notify-test-url", cfg.NotifyAddr)
 }

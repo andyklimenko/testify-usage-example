@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/andyklimenko/testify-usage-example/api"
+	"github.com/andyklimenko/testify-usage-example/api/external/changelog"
 	"github.com/andyklimenko/testify-usage-example/api/storage"
 	"github.com/andyklimenko/testify-usage-example/api/storage/database"
 	"github.com/andyklimenko/testify-usage-example/api/storage/migrations"
@@ -24,7 +25,8 @@ func main() {
 		logrus.Fatalf("applying db migrations: %v", err)
 	}
 
-	srv := api.New(cfg, storage.New(db), nil)
+	changelogNotifySvc := changelog.New(cfg.Server.NotifyAddr)
+	srv := api.New(cfg, storage.New(db), changelogNotifySvc)
 	if err := srv.Start(); err != nil {
 		logrus.Fatal(err)
 	}
