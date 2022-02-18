@@ -25,7 +25,7 @@ func main() {
 		logrus.Fatalf("applying db migrations: %v", err)
 	}
 
-	changelogNotifySvc := changelog.New(cfg.Server.NotifyAddr)
+	changelogNotifySvc := changelog.New(cfg.Notify.Addr)
 	srv := api.New(cfg, storage.New(db), changelogNotifySvc)
 	if err := srv.Start(); err != nil {
 		logrus.Fatal(err)
