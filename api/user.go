@@ -22,6 +22,10 @@ func (s *Server) createUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err := s.userChangelog.UserCreated(createdUser.ID); err != nil {
+		s.respondNotOK(w, http.StatusInternalServerError, fmt.Errorf("notifying external service: %w", err))
+		return
+	}
 	s.respondOK(w, http.StatusCreated, createdUser)
 }
 
@@ -61,6 +65,11 @@ func (s *Server) updateUser(w http.ResponseWriter, r *http.Request) {
 
 	res, err := s.repo.UpdateUser(r.Context(), userID, u)
 	if err == nil {
+		if err := s.userChangelog.UserUpdated(res.ID); err != nil {
+			s.respondNotOK(w, http.StatusInternalServerError, fmt.Errorf("notifying external service: %w", err))
+			return
+		}
+
 		s.respondOK(w, http.StatusOK, res)
 		return
 	}
@@ -83,6 +92,11 @@ func (s *Server) deleteUser(w http.ResponseWriter, r *http.Request) {
 
 	err := s.repo.DeleteUser(r.Context(), userID)
 	if err == nil {
+		if err := s.userChangelog.UserDeleted(userID); err != nil {
+			s.respondNotOK(w, http.StatusInternalServerError, fmt.Errorf("notifying external service: %w", err))
+			return
+		}
+
 		s.respondOK(w, http.StatusOK, nil)
 		return
 	}

@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"testing"
 	"time"
@@ -28,6 +29,19 @@ func (s *srvSuite) SetupSuite() {
 	s.httpCli = &http.Client{Timeout: time.Second}
 	db := database.DB()
 	s.repo = storage.New(db)
+}
+
+func (s *srvSuite) setupServer(changelog userChangelog) (string, func()) {
+	srv := &Server{
+		repo:          s.repo,
+		userChangelog: changelog,
+	}
+	testSrv := httptest.NewServer(setupRouter(srv))
+	srv.httpSrv = testSrv.Config
+
+	return testSrv.URL, func() {
+		testSrv.Close()
+	}
 }
 
 func TestMain(m *testing.M) {
