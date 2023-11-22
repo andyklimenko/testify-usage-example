@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -12,7 +13,6 @@ import (
 	"github.com/andyklimenko/testify-usage-example/api/entity"
 	"github.com/andyklimenko/testify-usage-example/config"
 	"github.com/gorilla/mux"
-	"github.com/sirupsen/logrus"
 )
 
 type repo interface {
@@ -40,7 +40,7 @@ func (s *Server) Start() error {
 	go func() {
 		<-termCh
 		if err := s.stop(); err != nil {
-			logrus.Errorf("failed to stop the server gracefully: %v", err)
+			slog.Error("failed to stop the server gracefully", err)
 		}
 	}()
 

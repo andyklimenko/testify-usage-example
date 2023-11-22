@@ -2,10 +2,8 @@ package api
 
 import (
 	"encoding/json"
-	"fmt"
+	"log/slog"
 	"net/http"
-
-	"github.com/sirupsen/logrus"
 )
 
 type statusResponse struct {
@@ -21,7 +19,7 @@ func (s *Server) respondNotOK(w http.ResponseWriter, statusCode int, err error) 
 	w.WriteHeader(statusCode)
 
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
-		logrus.Error(fmt.Errorf("marshal error response: %w", err))
+		slog.Error("marshal error response", err)
 		return
 	}
 }
@@ -36,6 +34,6 @@ func (s *Server) respondOK(w http.ResponseWriter, statusCode int, resp interface
 	e := json.NewEncoder(w)
 	e.SetEscapeHTML(false)
 	if err := e.Encode(resp); err != nil {
-		logrus.Error(fmt.Errorf("marshal response: %w", err))
+		slog.Error("marshal response", err)
 	}
 }

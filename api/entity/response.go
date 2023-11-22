@@ -2,12 +2,11 @@ package entity
 
 import (
 	"io"
-
-	"github.com/sirupsen/logrus"
+	"log/slog"
 )
 
 func CloseBody(c io.Closer) {
 	if err := c.Close(); err != nil {
-		logrus.Errorf("closing response body: %v", err)
+		slog.Error("closing response body", err)
 	}
 }
