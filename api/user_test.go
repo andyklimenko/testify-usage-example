@@ -41,12 +41,12 @@ func (s *srvSuite) createTestUser(srvURL string, u entity.User) (entity.User, er
 	}
 
 	defer entity.CloseBody(postUsersResp.Body)
-	if postUsersResp.StatusCode != http.StatusCreated {
+	if !assert.Equal(s.T(), http.StatusCreated, postUsersResp.StatusCode) {
 		return entity.User{}, fmt.Errorf("unexpected status-code: %d", postUsersResp.StatusCode)
 	}
 
 	var userCreated entity.User
-	if err := json.NewDecoder(postUsersResp.Body).Decode(&userCreated); err != nil {
+	if !assert.NoError(s.T(), json.NewDecoder(postUsersResp.Body).Decode(&userCreated)) {
 		return entity.User{}, fmt.Errorf("decode response body: %w", err)
 	}
 
