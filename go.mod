@@ -1,6 +1,6 @@
 module github.com/andyklimenko/testify-usage-example
 
-go 1.17
+go 1.21
 
 require (
 	github.com/fortytw2/dockertest v0.0.0-20211014152632-a835544d90ce
