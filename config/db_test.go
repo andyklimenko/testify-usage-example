@@ -39,10 +39,10 @@ func TestDBLoadOldWay(t *testing.T) {
 	}
 
 	if db.Driver != "postgres" {
-		t.Errorf("%s was expected byt %s got", "postgres", db.Driver)
+		t.Errorf("%s was expected but %s got", "postgres", db.Driver)
 	}
 
 	if db.DSN != "localhost" {
-		t.Errorf("%s was expected byt %s got", "localhost", db.DSN)
+		t.Errorf("%s was expected but %s got", "localhost", db.DSN)
 	}
 }
