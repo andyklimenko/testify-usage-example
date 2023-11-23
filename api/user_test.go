@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/andyklimenko/testify-usage-example/api/entity"
 	"github.com/google/uuid"
@@ -17,16 +18,16 @@ type mockedChangelog struct {
 	mock.Mock
 }
 
-func (m *mockedChangelog) UserCreated(userID string) error {
-	return m.Called(userID).Error(0)
+func (m *mockedChangelog) UserCreated(u entity.User) error {
+	return m.Called(u).Error(0)
 }
 
-func (m *mockedChangelog) UserUpdated(userID string) error {
-	return m.Called(userID).Error(0)
+func (m *mockedChangelog) UserUpdated(u entity.User) error {
+	return m.Called(u).Error(0)
 }
 
-func (m *mockedChangelog) UserDeleted(userID string) error {
-	return m.Called(userID).Error(0)
+func (m *mockedChangelog) UserDeleted(u entity.User) error {
+	return m.Called(u).Error(0)
 }
 
 func (s *srvSuite) createTestUser(srvURL string, u entity.User) (entity.User, error) {
@@ -67,10 +68,31 @@ func (s *srvSuite) TestGetUser() {
 	srvURL, closer := s.setupServer(&cl)
 	defer closer()
 
-	cl.On("UserCreated", mock.Anything).Return(nil)
+	userCh := make(chan entity.User, 1)
+	cl.On("UserCreated",
+		mock.MatchedBy(func(u entity.User) bool {
+			if !assert.Equal(s.T(), "John", u.FirstName) {
+				return false
+			}
+
+			if !assert.Equal(s.T(), "Doe", u.LastName) {
+				return false
+			}
+
+			userCh <- u
+			return true
+		}),
+	).Return(nil).Once()
 
 	userCreated, err := s.createTestUser(srvURL, newUser)
 	require.NoError(s.T(), err)
+
+	select {
+	case <-time.After(time.Second):
+		s.T().Fatal("timeout")
+	case userFromChangelog := <-userCh:
+		require.Equal(s.T(), userCreated.ID, userFromChangelog.ID)
+	}
 
 	getUsersResp, err := s.httpCli.Get(srvURL + "/users/" + userCreated.ID)
 	require.NoError(s.T(), err)
@@ -158,7 +180,12 @@ func (s *srvSuite) TestUpdateUser() {
 	req, err := http.NewRequest(http.MethodPut, srvURL+"/users/"+userCreated.ID, bytes.NewReader(bodyRaw))
 	require.NoError(s.T(), err)
 
-	cl.On("UserUpdated", userCreated.ID).Return(nil)
+	cl.On("UserUpdated",
+		mock.MatchedBy(func(u entity.User) bool {
+			return assert.Equal(s.T(), "Darth", u.FirstName) &&
+				assert.Equal(s.T(), "Wader", u.LastName)
+		}),
+	).Return(nil).Once()
 	getUsersResp, err := s.httpCli.Do(req)
 	require.NoError(s.T(), err)
 
@@ -204,14 +231,18 @@ func (s *srvSuite) TestDeleteUser() {
 	srvURL, closer := s.setupServer(&cl)
 	defer closer()
 
-	cl.On("UserCreated", mock.Anything).Return(nil)
+	cl.On("UserCreated", mock.Anything).Return(nil).Once()
 	userCreated, err := s.createTestUser(srvURL, newUser)
 	require.NoError(s.T(), err)
 
 	req, err := http.NewRequest(http.MethodDelete, srvURL+"/users/"+userCreated.ID, nil)
 	require.NoError(s.T(), err)
 
-	cl.On("UserDeleted", userCreated.ID).Return(nil)
+	cl.On("UserDeleted",
+		mock.MatchedBy(func(u entity.User) bool {
+			return assert.Equal(s.T(), userCreated.ID, u.ID)
+		}),
+	).Return(nil).Once()
 	deleteResp, err := s.httpCli.Do(req)
 	require.NoError(s.T(), err)
 

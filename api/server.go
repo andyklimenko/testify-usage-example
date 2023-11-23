@@ -23,9 +23,9 @@ type repo interface {
 }
 
 type userChangelog interface {
-	UserCreated(userID string) error
-	UserUpdated(userID string) error
-	UserDeleted(userID string) error
+	UserCreated(u entity.User) error
+	UserUpdated(u entity.User) error
+	UserDeleted(u entity.User) error
 }
 
 type Server struct {

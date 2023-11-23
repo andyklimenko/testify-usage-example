@@ -22,10 +22,8 @@ func (s *Server) createUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := s.userChangelog.UserCreated(createdUser.ID); err != nil {
-		s.respondNotOK(w, http.StatusInternalServerError, fmt.Errorf("notifying external service: %w", err))
-		return
-	}
+	go s.onUserCreated(createdUser)
+
 	s.respondOK(w, http.StatusCreated, createdUser)
 }
 
@@ -65,21 +63,17 @@ func (s *Server) updateUser(w http.ResponseWriter, r *http.Request) {
 
 	res, err := s.repo.UpdateUser(r.Context(), userID, u)
 	if err == nil {
-		if err := s.userChangelog.UserUpdated(res.ID); err != nil {
-			s.respondNotOK(w, http.StatusInternalServerError, fmt.Errorf("notifying external service: %w", err))
-			return
-		}
-
+		go s.onUserUpdated(res)
 		s.respondOK(w, http.StatusOK, res)
 		return
 	}
 
-	statusCode := http.StatusInternalServerError
+	statusCode := statusByErr(err)
 	err = fmt.Errorf("update user by id %s: %w", userID, err)
 	if errors.Is(err, entity.ErrNotFound) {
-		statusCode = http.StatusNotFound
 		err = fmt.Errorf("user %s not found", userID)
 	}
+
 	s.respondNotOK(w, statusCode, err)
 }
 
@@ -90,22 +84,39 @@ func (s *Server) deleteUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := s.repo.DeleteUser(r.Context(), userID)
-	if err == nil {
-		if err := s.userChangelog.UserDeleted(userID); err != nil {
-			s.respondNotOK(w, http.StatusInternalServerError, fmt.Errorf("notifying external service: %w", err))
-			return
+	existing, err := s.repo.UserByID(r.Context(), userID)
+	if err != nil {
+		statusCode := statusByErr(err)
+
+		err = fmt.Errorf("looking for a user: %w", err)
+		if errors.Is(err, entity.ErrNotFound) {
+			err = fmt.Errorf("user %s not found", userID)
 		}
 
+		s.respondNotOK(w, statusCode, err)
+		return
+	}
+
+	err = s.repo.DeleteUser(r.Context(), userID)
+	if err == nil {
+		go s.onUserDeleted(existing)
 		s.respondOK(w, http.StatusOK, nil)
 		return
 	}
 
-	statusCode := http.StatusInternalServerError
+	statusCode := statusByErr(err)
 	err = fmt.Errorf("delete user by id %s: %w", userID, err)
 	if errors.Is(err, entity.ErrNotFound) {
-		statusCode = http.StatusNotFound
 		err = fmt.Errorf("user %s not found", userID)
 	}
+
 	s.respondNotOK(w, statusCode, err)
+}
+
+func statusByErr(err error) int {
+	if errors.Is(err, entity.ErrNotFound) {
+		return http.StatusNotFound
+	}
+
+	return http.StatusInternalServerError
 }

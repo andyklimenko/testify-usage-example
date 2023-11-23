@@ -15,22 +15,22 @@ type RestNotifier struct {
 	cli  *http.Client
 }
 
-func (n *RestNotifier) UserCreated(userID string) error {
-	return n.notify(userID, created)
+func (n *RestNotifier) UserCreated(u entity.User) error {
+	return n.notify(u, created)
 }
 
-func (n *RestNotifier) UserUpdated(userID string) error {
-	return n.notify(userID, updated)
+func (n *RestNotifier) UserUpdated(u entity.User) error {
+	return n.notify(u, updated)
 }
 
-func (n *RestNotifier) UserDeleted(userID string) error {
-	return n.notify(userID, deleted)
+func (n *RestNotifier) UserDeleted(u entity.User) error {
+	return n.notify(u, deleted)
 }
 
-func (n *RestNotifier) notify(userID string, nt notificationType) error {
+func (n *RestNotifier) notify(u entity.User, nt notificationType) error {
 	nb := notificationBody{
 		NotificationType: nt,
-		UserID:           userID,
+		User:             u,
 	}
 	bodyRaw, err := json.Marshal(nb)
 	if err != nil {
